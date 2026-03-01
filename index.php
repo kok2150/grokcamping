@@ -22,7 +22,7 @@ $is_logged_in = isset($_SESSION['user_id']);
             --accent-dark: #ebe825;
             --border: #222222;
             --card: rgba(20, 20, 20, 0.9);
-            --overlay: rgba(0, 0, 0, 0.65);
+            --overlay: rgba(0,0,0,0.65);
             --glow: rgba(59, 130, 246, 0.25);
         }
         * { margin:0; padding:0; box-sizing:border-box; }
