@@ -3,7 +3,7 @@
 
 session_start();
 
-// Include database connection (optional for now, can be removed if not used yet)
+// Include database connection (optional for now, comment out if not needed yet)
 include '../includes/db_connect.php';
 
 // Page title
@@ -20,7 +20,7 @@ $page_title = "Products - Grok Camping";
         body {
             margin: 0;
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f8f9fa; /* Light white-gray, clean outdoor feel */
+            background: #ffffff; /* Pure white background */
             color: #212529;
         }
         .container {
@@ -30,11 +30,30 @@ $page_title = "Products - Grok Camping";
         }
         h1 {
             text-align: center;
-            color: #0d6efd; /* Blue accent for title */
+            color: #0d6efd; /* Blue title */
             margin-bottom: 60px;
             font-size: 3rem;
             font-weight: 700;
-            letter-spacing: 1px;
+        }
+        .category-nav, .brand-nav {
+            background: #f8f9fa;
+            padding: 15px 0;
+            border-bottom: 1px solid #dee2e6;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .category-nav a, .brand-nav a {
+            color: #212529;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0 20px;
+            padding: 8px 15px;
+            border-radius: 30px;
+            transition: all 0.3s;
+        }
+        .category-nav a:hover, .brand-nav a:hover {
+            background: #0d6efd;
+            color: white;
         }
         .product-grid {
             display: grid;
@@ -42,24 +61,23 @@ $page_title = "Products - Grok Camping";
             gap: 40px;
         }
         .product-card {
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(14px); /* Frosted glass effect */
-            border-radius: 20px;
+            background: #ffffff; /* Solid white card */
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-            transition: all 0.35s ease;
-            border: 1px solid rgba(13, 110, 253, 0.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Light shadow */
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
         }
         .product-card:hover {
-            transform: translateY(-12px);
-            box-shadow: 0 25px 50px rgba(13, 110, 253, 0.18);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(13, 110, 253, 0.12);
         }
         .product-image {
             width: 100%;
-            height: 300px;
+            height: 280px;
             object-fit: contain;
-            padding: 30px;
-            background: #ffffff;
+            padding: 25px;
+            background: #f8f9fa;
             border-bottom: 1px solid #e9ecef;
         }
         .product-info {
@@ -83,13 +101,13 @@ $page_title = "Products - Grok Camping";
         .product-price {
             font-size: 1.8rem;
             font-weight: bold;
-            color: #0d6efd; /* Blue price highlight */
+            color: #0d6efd; /* Blue price */
             margin-bottom: 20px;
         }
         .btn-add {
             display: inline-block;
             padding: 12px 40px;
-            background: #0d6efd;
+            background: #212529; /* Dark black button */
             color: white;
             text-decoration: none;
             font-size: 1.1rem;
@@ -98,9 +116,8 @@ $page_title = "Products - Grok Camping";
             transition: all 0.3s;
         }
         .btn-add:hover {
-            background: #0b5ed7;
-            transform: scale(1.06);
-            box-shadow: 0 8px 25px rgba(13, 110, 253, 0.3);
+            background: #0d6efd; /* Hover to blue */
+            transform: scale(1.05);
         }
     </style>
 </head>
@@ -110,6 +127,28 @@ $page_title = "Products - Grok Camping";
 
 <div class="container">
     <h1>Explore Our Camping Gear</h1>
+
+    <!-- Category Navigation -->
+    <div class="category-nav">
+        <a href="#">Tents</a>
+        <a href="#">Sleeping Bags</a>
+        <a href="#">Camp Tables & Chairs</a>
+        <a href="#">Lighting & Power</a>
+        <a href="#">Camp Kitchen & Cooking</a>
+        <a href="#">Outdoor Clothing & Backpacks</a>
+        <a href="#">Accessories & Tools</a>
+    </div>
+
+    <!-- Brand Navigation (placeholder for future brands) -->
+    <div class="brand-nav">
+        <a href="#">Grok Camping</a>
+        <a href="#">Coleman</a>
+        <a href="#">The North Face</a>
+        <a href="#">MSR</a>
+        <a href="#">Black Diamond</a>
+        <a href="#">Goal Zero</a>
+        <!-- You can add more brands later -->
+    </div>
 
     <div class="product-grid">
         <!-- Product 1 -->
