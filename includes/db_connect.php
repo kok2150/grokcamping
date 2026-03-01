@@ -2,7 +2,7 @@
 // includes/db_connect.php - Database connection using PDO
 
 $host = 'localhost';
-$dbname = 'grokgaming';  // Change to your actual database name
+$dbname = 'grokcamping';  // Change to your actual database name
 $username = 'root';
 $password = '';
 

@@ -1,0 +1,5 @@
+
+# Enable display of all PHP errors, warnings, notices (great for local dev)
+php_flag display_errors On
+php_flag display_startup_errors On
+php_value error_reporting -1
