@@ -1,13 +1,26 @@
 <?php
-// pages/products.php - Product Listing Page for Grok Camping
-
 session_start();
+require_once '../includes/db_connect.php'; 
 
-// Include database connection (optional for now, comment out if not needed yet)
-include '../includes/db_connect.php';
+$is_logged_in = isset($_SESSION['user_id']);
 
-// Page title
-$page_title = "Products - Grok Camping";
+$category = $_GET['category'] ?? '';
+$brand = $_GET['brand'] ?? '';
+$search = $_GET['search'] ?? '';
+
+$query = "SELECT * FROM products WHERE 1=1";
+$params = [];
+
+if ($category) { $query .= " AND category = ?"; $params[] = $category; }
+if ($brand) { $query .= " AND brand = ?"; $params[] = $brand; }
+if ($search) { $query .= " AND name LIKE ?"; $params[] = "%$search%"; }
+
+$stmt = $pdo->prepare($query);
+$stmt->execute($params);
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$all_cats = $pdo->query("SELECT DISTINCT category FROM products WHERE category IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
+$all_brands = $pdo->query("SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
 ?>
 
 <!DOCTYPE html>
@@ -15,211 +28,241 @@ $page_title = "Products - Grok Camping";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $page_title; ?></title>
+    <title>Products - GROK CAMPING</title>
     <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #ffffff; /* Pure white background */
-            color: #212529;
+        :root {
+            --bg: #000000;
+            --bg-dark: #0a0a0a;
+            --text: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent: #daf63b;
+            --border: #222222;
+            --card: rgba(20, 20, 20, 0.9);
+            --glow: rgba(218, 246, 59, 0.25);
         }
-        .container {
-            max-width: 1300px;
-            margin: 60px auto;
-            padding: 0 20px;
+
+        html { overflow-y: scroll; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            background: var(--bg); color: var(--text); 
+            padding-top: 75px; 
         }
-        h1 {
-            text-align: center;
-            color: #0d6efd; /* Blue title */
-            margin-bottom: 60px;
-            font-size: 3rem;
+
+        /* --- NAVIGATION --- */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.92); backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border); z-index: 1000;
+            padding: 0 5%; height: 75px; display: flex;
+            align-items: center; justify-content: space-between;
+        }
+        .nav-brand { font-size: 1.5rem; font-weight: 700; letter-spacing: 2px; color: var(--text); text-decoration: none;}
+        .nav-menu { display: flex; gap: 40px; }
+        .nav-menu a { 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            font-size: 0.95rem; 
             font-weight: 700;
+            padding-top: 15px; /* 字体往下移动 */
+            display: inline-block;
         }
-        .category-nav, .brand-nav {
-            background: #f8f9fa;
-            padding: 15px 0;
-            border-bottom: 1px solid #dee2e6;
-            text-align: center;
-            margin-bottom: 40px;
+        .nav-menu a:hover, .nav-menu a.active { color: var(--accent); }
+        .nav-right { display: flex; gap: 20px; align-items: center; }
+        .nav-icon { width: 22px; height: 22px; object-fit: contain; }
+
+        /* --- SHOP LAYOUT --- */
+        .shop-container {
+            max-width: 1400px; margin: 0 auto;
+            display: grid; grid-template-columns: 240px 1fr;
+            gap: 50px; padding: 40px 5%;
         }
-        .category-nav a, .brand-nav a {
-            color: #212529;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 0 20px;
-            padding: 8px 15px;
-            border-radius: 30px;
-            transition: all 0.3s;
+
+        /* --- SIDEBAR --- */
+        .sidebar h3 {
+            font-size: 0.75rem; color: var(--accent); text-transform: uppercase;
+            letter-spacing: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
         }
-        .category-nav a:hover, .brand-nav a:hover {
-            background: #0d6efd;
-            color: white;
+        .filter-list { list-style: none; margin-bottom: 40px; }
+        .filter-list li { margin-bottom: 8px; }
+        .filter-list a { 
+            display: block; color: var(--text-muted); text-decoration: none; 
+            font-size: 0.9rem; transition: all 0.2s ease;
+            border-left: 2px solid transparent; padding-left: 10px;
         }
+        .filter-list a:hover { color: #fff; border-left-color: #444; }
+        .filter-list a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+        /* --- PRODUCT CARD --- */
         .product-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 40px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
         }
         .product-card {
-            background: #ffffff; /* Solid white card */
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Light shadow */
-            transition: all 0.3s ease;
-            border: 1px solid #e9ecef;
+            position: relative; background: var(--bg-dark); border: 1px solid var(--border);
+            border-radius: 24px; padding: 20px; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column;
         }
-        .product-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 30px rgba(13, 110, 253, 0.12);
+        .product-card:hover { border-color: var(--accent); transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+
+        .wishlist-btn {
+            position: absolute; top: 15px; right: 15px; width: 48px; height: 48px; 
+            background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: 0.3s;
         }
-        .product-image {
-            width: 100%;
-            height: 280px;
-            object-fit: contain;
-            padding: 25px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
+        .wishlist-btn svg { width: 24px; height: 24px; fill: none; stroke: white; stroke-width: 2; transition: 0.3s; }
+        .wishlist-btn:hover { background: var(--accent); border-color: var(--accent); transform: scale(1.1); }
+        .wishlist-btn:hover svg { stroke: #000; }
+
+        .img-container {
+            width: 100%; height: 240px; background: #111; border-radius: 18px; 
+            margin-bottom: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
-        .product-info {
-            padding: 25px;
-            text-align: center;
+        .img-container img { max-width: 80%; height: auto; transition: 0.5s; }
+        .product-card:hover .img-container img { transform: scale(1.1); }
+
+        .p-info { flex-grow: 1; margin-bottom: 20px; }
+        .p-title { font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: 8px; line-height: 1.3; }
+        .p-meta { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: flex; gap: 6px; margin-bottom: 12px; }
+        .meta-tag { background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border); text-transform: uppercase; }
+        .p-price { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+
+        .card-actions { display: flex; gap: 12px; }
+        .btn-learn {
+            flex: 1; text-align: center; text-decoration: none; padding: 12px 0; border: 1px solid #333;
+            background: rgba(255, 255, 255, 0.05); color: #fff; border-radius: 50px; font-size: 0.75rem;
+            font-weight: 700; transition: 0.3s; text-transform: uppercase;
         }
-        .product-name {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin: 0 0 12px;
-            color: #212529;
+        .btn-learn:hover { background: #fff; color: #000; border-color: #fff; }
+
+        .btn-cart {
+            flex: 1.4; padding: 12px 0; background: var(--accent); color: #000; border: none; 
+            border-radius: 50px; font-weight: 800; font-size: 0.75rem; cursor: pointer; transition: 0.3s; text-transform: uppercase;
         }
-        .product-desc {
-            font-size: 1rem;
-            color: #6c757d;
-            margin-bottom: 20px;
-            height: 70px;
-            overflow: hidden;
-            line-height: 1.5;
-        }
-        .product-price {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #0d6efd; /* Blue price */
-            margin-bottom: 20px;
-        }
-        .btn-add {
-            display: inline-block;
-            padding: 12px 40px;
-            background: #212529; /* Dark black button */
-            color: white;
-            text-decoration: none;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 50px;
-            transition: all 0.3s;
-        }
-        .btn-add:hover {
-            background: #0d6efd; /* Hover to blue */
-            transform: scale(1.05);
+        .btn-cart:hover { background: #fff; transform: scale(1.03); box-shadow: 0 0 20px var(--glow); }
+
+        @media (max-width: 850px) {
+            .shop-container { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
         }
     </style>
 </head>
 <body>
 
-<?php include '../includes/header.php'; ?>
+    <nav>
+        <a href="../index.php" class="nav-brand">GROK CAMPING</a>
+        <div class="nav-menu">
+            <a href="../index.php">HOME</a>
+            <a href="products.php" class="active">PRODUCT</a>
+            <a href="contact.php">CONTACT US</a>
+        </div>
+        
+        <div class="nav-right">
+            <form action="products.php" method="GET" style="display:flex; background:rgba(255,255,255,0.05); border-radius:20px; padding:5px 15px; border:1px solid var(--border);">
+                <input type="text" name="search" placeholder="Search gear..." value="<?= htmlspecialchars($search) ?>" style="background:none; border:none; color:white; outline:none; width:100px;">
+                <button type="submit" style="background:none; border:none; cursor:pointer;">
+                    <img src="../assets/images/search-icon.png" class="nav-icon">
+                </button>
+            </form>
+            <a href="wishlist.php" class="icon-link"><img src="../assets/images/wishlist-icon.png" class="nav-icon"></a>
+            <a href="cart.php" class="icon-link"><img src="../assets/images/cart-icon.png" class="nav-icon"></a>
+            <a href="<?= $is_logged_in ? 'profile.php' : 'login.php' ?>" class="icon-link"><img src="../assets/images/user-icon.png" class="nav-icon"></a>
+        </div>
+    </nav>
 
-<div class="container">
-    <h1>Explore Our Camping Gear</h1>
+    <div class="shop-container">
+        <aside class="sidebar">
+            <h3>By Categories</h3>
+            <ul class="filter-list">
+                <li><a href="products.php" class="<?= !$category && !$brand ? 'active' : '' ?>">All Collection</a></li>
+                <?php foreach($all_cats as $cat): ?>
+                    <li><a href="?category=<?= urlencode($cat) ?>" class="<?= $category == $cat ? 'active' : '' ?>"><?= htmlspecialchars($cat) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
 
-    <!-- Category Navigation -->
-    <div class="category-nav">
-        <a href="#">Tents</a>
-        <a href="#">Sleeping Bags</a>
-        <a href="#">Camp Tables & Chairs</a>
-        <a href="#">Lighting & Power</a>
-        <a href="#">Camp Kitchen & Cooking</a>
-        <a href="#">Outdoor Clothing & Backpacks</a>
-        <a href="#">Accessories & Tools</a>
+            <h3>By Brands</h3>
+            <ul class="filter-list">
+                <?php foreach($all_brands as $b): ?>
+                    <li><a href="?brand=<?= urlencode($b) ?>" class="<?= $brand == $b ? 'active' : '' ?>"><?= htmlspecialchars($b) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+        </aside>
+
+        <main>
+            <h2 style="margin-bottom: 30px; letter-spacing: 2px; text-transform: uppercase;">
+                <?= htmlspecialchars($category ?: ($brand ?: ($search ? "Search: $search" : 'Exploration Gear'))) ?>
+            </h2>
+
+            <div class="product-grid">
+                <?php foreach ($products as $p): ?>
+                <div class="product-card">
+                    <div class="wishlist-btn" onclick="addToWishlist(<?= $p['id'] ?>)">
+                        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    </div>
+
+                    <div class="img-container">
+                        <img src="<?= htmlspecialchars($p['image_url'] ?: '../assets/images/placeholder.png') ?>" alt="Product">
+                    </div>
+                    
+                    <div class="p-info">
+                        <div class="p-title"><?= htmlspecialchars($p['name']) ?></div>
+                        <div class="p-meta">
+                            <span class="meta-tag"><?= htmlspecialchars($p['brand']) ?></span>
+                            <span class="meta-tag"><?= htmlspecialchars($p['category']) ?></span>
+                        </div>
+                        <div class="p-price">$<?= number_format($p['price'], 2) ?></div>
+                    </div>
+                    
+                    <div class="card-actions">
+                        <a href="product_details.php?id=<?= $p['id'] ?>" class="btn-learn">Learn More</a>
+                        <button class="btn-cart" onclick="addToCart(<?= $p['id'] ?>)">Add to Cart</button>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+            <?php if (empty($products)): ?>
+                <div style="text-align: center; padding: 100px 0; color: var(--text-muted);">No gear found.</div>
+            <?php endif; ?>
+        </main>
     </div>
 
-    <!-- Brand Navigation (placeholder for future brands) -->
-    <div class="brand-nav">
-        <a href="#">Grok Camping</a>
-        <a href="#">Coleman</a>
-        <a href="#">The North Face</a>
-        <a href="#">MSR</a>
-        <a href="#">Black Diamond</a>
-        <a href="#">Goal Zero</a>
-        <!-- You can add more brands later -->
-    </div>
+    <script>
+    // 加入购物车功能
+    function addToCart(productId) {
+        fetch(`add_to_cart.php?product_id=${productId}`)
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert('🛒 ' + data.message);
+            } else if(data.message === 'Please login first') {
+                window.location.href = 'login.php';
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(err => console.error('Error:', err));
+    }
 
-    <div class="product-grid">
-        <!-- Product 1 -->
-        <div class="product-card">
-            <img src="../assets/images/tent.jpg" alt="4-Season Tent" class="product-image">
-            <div class="product-info">
-                <div class="product-name">4-Season Dome Tent (4 Person)</div>
-                <div class="product-desc">Waterproof, windproof, easy setup. Perfect for all-weather camping.</div>
-                <div class="product-price">$189.00</div>
-                <a href="#" class="btn-add">Add to Cart</a>
-            </div>
-        </div>
-
-        <!-- Product 2 -->
-        <div class="product-card">
-            <img src="../assets/images/sleepingbag.jpg" alt="Mummy Sleeping Bag" class="product-image">
-            <div class="product-info">
-                <div class="product-name">Down Mummy Sleeping Bag (-10°C)</div>
-                <div class="product-desc">800-fill power down, lightweight, compact. Warm and comfortable.</div>
-                <div class="product-price">$129.00</div>
-                <a href="#" class="btn-add">Add to Cart</a>
-            </div>
-        </div>
-
-        <!-- Product 3 -->
-        <div class="product-card">
-            <img src="../assets/images/lantern.jpg" alt="Rechargeable LED Lantern" class="product-image">
-            <div class="product-info">
-                <div class="product-name">Rechargeable LED Camping Lantern (1000LM)</div>
-                <div class="product-desc">USB rechargeable, 4 light modes, 360° lighting. Long battery life.</div>
-                <div class="product-price">$49.90</div>
-                <a href="#" class="btn-add">Add to Cart</a>
-            </div>
-        </div>
-
-        <!-- Product 4 -->
-        <div class="product-card">
-            <img src="../assets/images/stove.jpg" alt="Portable Gas Stove" class="product-image">
-            <div class="product-info">
-                <div class="product-name">Portable Gas Camping Stove</div>
-                <div class="product-desc">Compact, wind-resistant, high BTU output. Perfect for outdoor cooking.</div>
-                <div class="product-price">$69.90</div>
-                <a href="#" class="btn-add">Add to Cart</a>
-            </div>
-        </div>
-
-        <!-- Product 5 -->
-        <div class="product-card">
-            <img src="../assets/images/picnicmat.jpg" alt="Waterproof Picnic Mat" class="product-image">
-            <div class="product-info">
-                <div class="product-name">Large Waterproof Picnic Mat (300x300cm)</div>
-                <div class="product-desc">Foldable, sand-resistant, easy clean. Great for family outings.</div>
-                <div class="product-price">$39.90</div>
-                <a href="#" class="btn-add">Add to Cart</a>
-            </div>
-        </div>
-
-        <!-- Product 6 -->
-        <div class="product-card">
-            <img src="../assets/images/powerbank.jpg" alt="Solar Power Bank" class="product-image">
-            <div class="product-info">
-                <div class="product-name">Solar Power Bank (20000mAh)</div>
-                <div class="product-desc">Built-in solar panel, fast charging, IP65 waterproof. Ideal for off-grid camping.</div>
-                <div class="product-price">$89.90</div>
-                <a href="#" class="btn-add">Add to Cart</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<?php include '../includes/footer.php'; ?>
-
+    // 加入收藏夹功能
+    function addToWishlist(productId) {
+        if (event) event.stopPropagation();
+        
+        fetch(`add_to_wishlist.php?product_id=${productId}`)
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert('❤️ ' + data.message);
+            } else if(data.message === 'Please login first') {
+                window.location.href = 'login.php';
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(err => console.error('Error:', err));
+    }
+    </script>
 </body>
 </html>
